@@ -123,8 +123,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Update transaction with payment URL - use another transaction for atomicity
     await prisma.transaction.update({
       where: { merchantOrderId: result.merchantOrderId },
       data: { paymentUrl: paymentData.paymentUrl },

@@ -1,27 +1,37 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { HeaderFindInvoice } from "./header-find-invoice"
 import { trpc } from "@/utils/trpc"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Loader2, Search, MessageSquare } from "lucide-react"
 
 export function ClientPage() {
   const [term, setTerm] = useState<string>("")
+  const [debouncedTerm, setDebouncedTerm] = useState<string>("")
   
-  // Using trpc to fetch invoice data when term changes
+  // Debounce the search term with 300ms delay
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedTerm(term)
+    }, 300)
+    
+    return () => clearTimeout(timerId)
+  }, [term])
+
+  // Using trpc to fetch invoice data when debounced term changes
   const { data, isLoading, error } = trpc.inv.findById.useQuery(
-    { id: term },
-    { enabled: term.length > 0 } 
+    { id: debouncedTerm },
+    { enabled: debouncedTerm.length > 10 } 
   )
 
   // Handle the onChange event properly
   const handleSearchChange = (newTerm: string) => {
     setTerm(newTerm)
   }
-
 
   const maskInvoiceNumber = (invoiceNumber: string) => {
     if (!invoiceNumber) return '';
@@ -39,7 +49,6 @@ export function ClientPage() {
     // Return the masked invoice number
     return prefix + maskedMiddle + suffix;
   };
-
 
   // Function to mask phone number - show only first 3 digits
   const maskPhoneNumber = (phoneNumber: string) => {
@@ -61,6 +70,13 @@ export function ClientPage() {
     }).format(amount);
   }
 
+  // Function to handle contact admin button click
+  const handleContactAdmin = () => {
+  
+    console.log("Contacting admin for help with invoice:", term)
+
+  }
+
   return (
     <main className="container mx-auto p-4 max-w-4xl">
       <div className="space-y-10 p-6">
@@ -80,7 +96,7 @@ export function ClientPage() {
         )}
         
         {/* Loading state */}
-        {isLoading && term && (
+        {isLoading && debouncedTerm && (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -114,14 +130,20 @@ export function ClientPage() {
           </Table>
         )}
         
-        {/* No results state */}
-        {!isLoading && !error && term && !data && (
+        {/* No results state with admin contact button */}
+        {!isLoading && !error && debouncedTerm && !data && (
           <Card className="">
             <CardContent className="flex flex-col items-center py-12">
               <Search className="h-12 w-12 mb-4" />
-              <p className="text-center">
-                No invoice found with ID: <span className="font-medium">{term}</span>
+              <p className="text-center mb-4">
+                Invoice Tidak Ditemukan: <span className="font-medium">{debouncedTerm}</span>
               </p>
+              <Button 
+                onClick={handleContactAdmin}
+                className="flex items-center gap-2"
+              >
+                Tanya Admin
+              </Button>
             </CardContent>
           </Card>
         )}

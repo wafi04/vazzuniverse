@@ -449,7 +449,6 @@ export async function POST(req: NextRequest) {
             data: { ref_id: paymentReference },
           });
 
-        
           return NextResponse.json({
             paymentUrl: data.paymentUrl,
             reference: paymentReference,

@@ -118,18 +118,20 @@ export async function POST(req: NextRequest) {
           where: { id: depositId },
           data: { status: paymentStatus },
         });
-        
         if (paymentStatus === 'SUCCESS') {
           const deposit = await tx.deposits.findUnique({
             where: { id: depositId },
           });
           
-          console.log('Deposit found:', deposit);
-          
+          let role :string = "Member"
           if (deposit) {
+            if(deposit.amount > 50000){
+              role =  "Platinum"
+            }
             await tx.users.update({
               where: { id: deposit.userId },
               data: {
+                role,
                 balance: {
                   increment: deposit.amount,
                 },
