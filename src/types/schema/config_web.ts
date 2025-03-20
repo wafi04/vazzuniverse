@@ -64,6 +64,10 @@ export const configWeb = z.object({
   email: z.string().email(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
+  waPending   :z.string().nullable(),   
+  waPaid    :z.string().nullable(),  
+  waProcess  :z.string().nullable(),  
+  waSuccess  :z.string().nullable(),  
 });
 
 export type CreateConfigWeb = z.infer<typeof configWeb>;

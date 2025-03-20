@@ -22,13 +22,14 @@ export function GeneralPage() {
 
       <section className="w-full">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid grid-cols-6 mb-6">
+          <TabsList className="grid grid-cols-7 mb-6">
             <TabsTrigger value="general">Umum</TabsTrigger>
             <TabsTrigger value="appearance">Tampilan</TabsTrigger>
             <TabsTrigger value="social">Sosial Media</TabsTrigger>
             <TabsTrigger value="payment">Pembayaran</TabsTrigger>
             <TabsTrigger value="api">API</TabsTrigger>
             <TabsTrigger value="company">Perusahaan</TabsTrigger>
+            <TabsTrigger value="wa">Wa</TabsTrigger>
           </TabsList>
 
           <div className="w-full">
