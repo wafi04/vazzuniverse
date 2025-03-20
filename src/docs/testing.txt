@@ -1,0 +1,332 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { Check, Clock, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDate } from '@/utils/formatPrice';
+
+interface PaymentData {
+  createdAt: string;
+  updatedAt: string;
+  paymentUrl?: string;
+  vaNumber?: string;
+  qrString?: string;
+  reference?: string;
+  amount?: string;
+  paymentMethod?: string;
+  originalAmount?: string;
+  statusCode?: string;
+  statusMessage?: string;
+  transaction?: {
+    merchantOrderId: string;
+    paymentStatus: string;
+    paymentCode: string;
+    finalAmount: number;
+    createdAt: string;
+    noWa: string;
+  };
+}
+
+export default function PaymentStatusPage() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [copied, setCopied] = useState(false);
+  const searchParams = useSearchParams();
+  const merchantOrderId = searchParams.get('merchantOrderId');
+
+  useEffect(() => {
+    async function fetchPaymentDetail() {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `/api/payment/details?merchantOrderId=${merchantOrderId}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch payment details');
+        }
+
+        const data = await response.json();
+        console.log(data);
+        setPaymentData(data.data.transaction);
+      } catch (err) {
+        setError('Gagal mendapatkan detail pembayaran');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (merchantOrderId) {
+      fetchPaymentDetail();
+    }
+  }, [merchantOrderId]);
+
+  const refreshStatus = async () => {
+    if (!merchantOrderId) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `/api/payment/details?merchantOrderId=${merchantOrderId}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment details');
+      }
+
+      const data = await response.json();
+      setPaymentData(data.data.transaction);
+    } catch (err) {
+      setError('Gagal memperbarui status pembayaran');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'SUCCESS':
+        return <Badge className="bg-green-500">Berhasil</Badge>;
+      case 'PENDING':
+        return <Badge className="bg-yellow-500">Menunggu Pembayaran</Badge>;
+      case 'FAILED':
+        return <Badge className="bg-red-500">Gagal</Badge>;
+      case 'PROCESS':
+        return <Badge className="bg-blue-500">Diproses</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  if (error) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle>Error</CardTitle>
+          <CardDescription>Terjadi kesalahan saat memuat data</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-red-500">{error}</div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={refreshStatus} className="w-full">
+            Coba Lagi
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-1/2 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </CardContent>
+        <CardFooter>
+          <Skeleton className="h-10 w-full" />
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  const status =
+    paymentData?.transaction?.paymentStatus ||
+    paymentData?.statusMessage ||
+    'PENDING';
+  const amount =
+    paymentData?.transaction?.finalAmount ||
+    parseInt(paymentData?.originalAmount as string);
+  const reference = paymentData?.reference || '';
+  const paymentMethod =
+    paymentData?.paymentMethod || paymentData?.transaction?.paymentCode || '';
+  const vaNumber = paymentData?.vaNumber || '';
+  const qrString = paymentData?.qrString || '';
+  const paymentUrl = paymentData?.paymentUrl || '';
+  const createdAt = formatDate(paymentData?.createdAt as string);
+
+  console.log(amount);
+  return (
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-xl">Detail Pembayaran</CardTitle>
+          {getStatusBadge(status)}
+        </div>
+        <CardDescription>Order ID: {merchantOrderId}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        {/* Amount Section */}
+        <div className="bg-primary/5 p-4 rounded-lg text-center">
+          <p className="text-sm text-muted-foreground mb-1">Total Pembayaran</p>
+          <p className="text-2xl font-bold">
+            {amount.toLocaleString('id-ID', {
+              style: 'currency',
+              currency: 'IDR',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            })}
+          </p>
+        </div>
+
+        {/* Payment Details */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <p className="text-muted-foreground">Metode Pembayaran</p>
+            <p className="text-right font-medium">{paymentMethod}</p>
+
+            <p className="text-muted-foreground">Waktu Pemesanan</p>
+            <p className="text-right font-medium">{createdAt}</p>
+
+            <p className="text-muted-foreground">Referensi</p>
+            <div className="flex items-center justify-end gap-1">
+              <p className="font-medium truncate">{reference}</p>
+              {reference && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => copyToClipboard(reference)}
+                >
+                  {copied ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* VA Number */}
+        {vaNumber && (
+          <div className="border rounded-lg p-4">
+            <p className="text-sm text-muted-foreground mb-2">
+              Nomor Virtual Account
+            </p>
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-lg font-medium">{vaNumber}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => copyToClipboard(vaNumber)}
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 mr-1" />
+                ) : (
+                  <Copy className="h-4 w-4 mr-1" />
+                )}
+                Salin
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* QR Code */}
+        {qrString && (
+          <div className="border rounded-lg p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-2">Scan QRIS</p>
+            <div className="flex justify-center my-2">
+              <Image
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                  qrString
+                )}`}
+                alt="QRIS Code"
+                width={200}
+                height={200}
+                className="mx-auto"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Scan QR code di atas dengan aplikasi pembayaran Anda
+            </p>
+          </div>
+        )}
+
+        {/* Status Info */}
+        <div className="bg-muted/50 rounded-lg p-4 flex items-center gap-3">
+          {status === 'PENDING' ? (
+            <Clock className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+          ) : status === 'SUCCESS' ? (
+            <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+          ) : (
+            <Clock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          )}
+          <div>
+            <p className="font-medium">
+              {status === 'PENDING'
+                ? 'Menunggu Pembayaran'
+                : status === 'SUCCESS'
+                ? 'Pembayaran Berhasil'
+                : status === 'PROCESS'
+                ? 'Pembayaran Sedang Diproses'
+                : status}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {status === 'PENDING'
+                ? 'Silakan selesaikan pembayaran Anda'
+                : status === 'SUCCESS'
+                ? 'Transaksi Anda telah berhasil'
+                : status === 'PROCESS'
+                ? 'Mohon tunggu sementara kami memproses pembayaran Anda'
+                : ''}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+
+      <Separator />
+
+      <CardFooter className="flex flex-col gap-3 pt-6">
+        {paymentUrl && status === 'PENDING' && (
+          <Button className="w-full" asChild>
+            <a href={paymentUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Lanjutkan ke Halaman Pembayaran
+            </a>
+          </Button>
+        )}
+
+        <Button
+          variant={paymentUrl && status === 'PENDING' ? 'outline' : 'default'}
+          className="w-full"
+          onClick={refreshStatus}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Perbarui Status
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
