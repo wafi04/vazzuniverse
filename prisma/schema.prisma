@@ -388,7 +388,10 @@ model WebsiteConfig {
   email               String
   created_at          DateTime? @default(now())
   updated_at          DateTime? @updatedAt
-  messageWaByStatus   String?
+  waPending     String?    
+  waPaid    String?
+  waProcess  String?
+  waSuccess  String?
 
 
   @@map("setting_webs")
