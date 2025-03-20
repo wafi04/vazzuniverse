@@ -388,6 +388,7 @@ model WebsiteConfig {
   email               String
   created_at          DateTime? @default(now())
   updated_at          DateTime? @updatedAt
+  messageWaByStatus   String?
 
 
   @@map("setting_webs")
